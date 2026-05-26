@@ -66,13 +66,64 @@ function scan() {
 
     if (code) {
 
-      scanning = false;
-      stopCamera();
+  scanning = false;
+  stopCamera();
 
-      // 🔥 WICHTIG: KEIN fetch, KEIN JS Chaos
-      window.location.href = code.data;
-      return;
-    }
+  fetch(code.data)
+    .then(res => res.text())
+    .then(result => {
+
+      const parts = result.split("|");
+      const status = parts[0];
+      const name = parts[1] || "";
+
+      if (status === "OK") {
+
+        soundGood.play();
+
+        document.body.style.background = "green";
+        document.body.innerHTML = `
+          <h1 style="font-size:50px;">✔ GÜLTIG</h1>
+          <p style="font-size:30px;">${name}</p>
+        `;
+
+      } else {
+
+        soundBad.play();
+
+        document.body.style.background = "red";
+        document.body.innerHTML = `
+          <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
+          <p style="font-size:20px;">Bereits eingelöst</p>
+        `;
+      }
+
+      setTimeout(() => {
+
+        // Kamera neu starten (WICHTIG: kein reload!)
+        document.body.innerHTML = `
+          <h1>🎫 QR Scanner aktiv</h1>
+          <video id="video" playsinline style="width:100vw;height:80vh;object-fit:cover"></video>
+          <canvas id="canvas" style="display:none"></canvas>
+          <button onclick="startCamera()">Kamera starten</button>
+        `;
+
+        video = document.getElementById("video");
+        canvas = document.getElementById("canvas");
+        ctx = canvas.getContext("2d");
+
+        startCamera();
+
+      }, 2000);
+
+    })
+    .catch(err => {
+      soundBad.play();
+      alert("Fehler: " + err);
+    });
+
+  return;
+}
   }
 
   requestAnimationFrame(scan);
