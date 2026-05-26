@@ -2,19 +2,50 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Scanner</title>
+  <title>QR Scanner</title>
 
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: Arial;
+      text-align: center;
+    }
+
+    h2 {
+      margin: 10px 0;
+    }
+
+    video {
+      width: 100vw;
+      height: 80vh;
+      object-fit: cover;
+      background: black;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    button {
+      font-size: 18px;
+      padding: 12px 16px;
+      margin: 10px;
+    }
+  </style>
 </head>
 
-<body style="margin:0;background:#111;color:white;text-align:center;font-family:Arial">
+<body>
 
-<h2>Scanner</h2>
+<h2>🎫 QR Scanner aktiv</h2>
 
-<video id="video" style="width:100vw;height:80vh;object-fit:cover" playsinline></video>
-<canvas id="canvas" style="display:none"></canvas>
+<video id="video" playsinline></video>
+<canvas id="canvas"></canvas>
 
-<button onclick="startCamera()" style="font-size:20px;padding:10px">Start</button>
+<button onclick="startCamera()">Start</button>
 
 <script>
 
@@ -23,7 +54,10 @@ let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 
 let stream = null;
-let scanning = false;
+let scanLock = false;
+
+const soundGood = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+const soundBad = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
 async function startCamera() {
 
@@ -36,11 +70,10 @@ async function startCamera() {
     video.srcObject = stream;
     await video.play();
 
-    scanning = true;
-    scan();
+    requestAnimationFrame(scan);
 
-  } catch (e) {
-    alert("Kamera Fehler: " + e);
+  } catch (err) {
+    alert("Kamera Fehler: " + err);
   }
 }
 
@@ -52,87 +85,78 @@ function stopCamera() {
 
 function scan() {
 
-  if (!scanning) return;
-
   if (video.readyState === video.HAVE_ENOUGH_DATA) {
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     let img = ctx.getImageData(0, 0, canvas.width, canvas.height);
     let code = jsQR(img.data, canvas.width, canvas.height);
 
-    if (code) {
+    if (code && !scanLock) {
 
-  scanning = false;
-  stopCamera();
+      scanLock = true;
 
-  fetch(code.data)
-  .then(res => res.text())
-  .then(result => {
+      fetch(code.data)
+        .then(res => res.text())
+        .then(result => {
 
-    console.log("RAW RESULT:", result);
+          const parts = result.split("|");
+          const status = parts[0];
+          const name = parts[1] || "";
 
-    alert("DEBUG: " + result);
+          if (status === "OK") {
 
-    const parts = result.split("|");
-    const status = parts[0];
-    const name = parts[1] || "";
+            soundGood.play();
 
-    if (status === "OK") {
+            document.body.style.background = "green";
+            document.body.innerHTML = `
+              <h1 style="font-size:50px;">✔ GÜLTIG</h1>
+              <p style="font-size:30px;">${name}</p>
+            `;
 
-      soundGood.play();
-      document.body.style.background = "green";
-      document.body.innerHTML = `
-        <h1 style="font-size:50px;">✔ GÜLTIG</h1>
-        <p style="font-size:30px;">${name}</p>
-      `;
+          } else {
 
-    } else {
+            soundBad.play();
 
-      soundBad.play();
-      document.body.style.background = "red";
-      document.body.innerHTML = `
-        <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
-      `;
+            document.body.style.background = "red";
+            document.body.innerHTML = `
+              <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
+              <p style="font-size:20px;">Bereits eingelöst</p>
+            `;
+          }
+
+          setTimeout(() => {
+
+            document.body.innerHTML = `
+              <h2>🎫 QR Scanner aktiv</h2>
+              <video id="video" playsinline></video>
+              <canvas id="canvas" style="display:none"></canvas>
+              <button onclick="startCamera()">Start</button>
+            `;
+
+            video = document.getElementById("video");
+            canvas = document.getElementById("canvas");
+            ctx = canvas.getContext("2d");
+
+            scanLock = false;
+
+            startCamera();
+
+          }, 2000);
+
+        })
+        .catch(err => {
+
+          alert("FEHLER: " + err);
+
+          scanLock = false;
+        });
+
+      return;
     }
-
-    setTimeout(() => location.reload(), 2000);
-
-  })
-  .catch(err => {
-
-    alert("FETCH ERROR: " + err);
-    console.error(err);
-
-    soundBad.play();
-  });
-        // Kamera neu starten (WICHTIG: kein reload!)
-        document.body.innerHTML = `
-          <h1>🎫 QR Scanner aktiv</h1>
-          <video id="video" playsinline style="width:100vw;height:80vh;object-fit:cover"></video>
-          <canvas id="canvas" style="display:none"></canvas>
-          <button onclick="startCamera()">Kamera starten</button>
-        `;
-
-        video = document.getElementById("video");
-        canvas = document.getElementById("canvas");
-        ctx = canvas.getContext("2d");
-
-        startCamera();
-
-      }, 2000);
-
-    })
-    .catch(err => {
-      soundBad.play();
-      alert("Fehler: " + err);
-    });
-
-  return;
-}
   }
 
   requestAnimationFrame(scan);
