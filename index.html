@@ -70,36 +70,45 @@ function scan() {
   stopCamera();
 
   fetch(code.data)
-    .then(res => res.text())
-    .then(result => {
+  .then(res => res.text())
+  .then(result => {
 
-      const parts = result.split("|");
-      const status = parts[0];
-      const name = parts[1] || "";
+    console.log("RAW RESULT:", result);
 
-      if (status === "OK") {
+    alert("DEBUG: " + result);
 
-        soundGood.play();
+    const parts = result.split("|");
+    const status = parts[0];
+    const name = parts[1] || "";
 
-        document.body.style.background = "green";
-        document.body.innerHTML = `
-          <h1 style="font-size:50px;">✔ GÜLTIG</h1>
-          <p style="font-size:30px;">${name}</p>
-        `;
+    if (status === "OK") {
 
-      } else {
+      soundGood.play();
+      document.body.style.background = "green";
+      document.body.innerHTML = `
+        <h1 style="font-size:50px;">✔ GÜLTIG</h1>
+        <p style="font-size:30px;">${name}</p>
+      `;
 
-        soundBad.play();
+    } else {
 
-        document.body.style.background = "red";
-        document.body.innerHTML = `
-          <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
-          <p style="font-size:20px;">Bereits eingelöst</p>
-        `;
-      }
+      soundBad.play();
+      document.body.style.background = "red";
+      document.body.innerHTML = `
+        <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
+      `;
+    }
 
-      setTimeout(() => {
+    setTimeout(() => location.reload(), 2000);
 
+  })
+  .catch(err => {
+
+    alert("FETCH ERROR: " + err);
+    console.error(err);
+
+    soundBad.play();
+  });
         // Kamera neu starten (WICHTIG: kein reload!)
         document.body.innerHTML = `
           <h1>🎫 QR Scanner aktiv</h1>
