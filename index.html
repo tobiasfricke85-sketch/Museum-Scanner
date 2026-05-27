@@ -173,8 +173,11 @@ function scan() {
       };
 
       const script = document.createElement("script");
+const url = new URL(code.data);
 
-      script.src = code.data + "&callback=" + callbackName;
+url.searchParams.set("callback", callbackName);
+
+script.src = url.toString();
 
       script.onerror = function() {
 
