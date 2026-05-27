@@ -17,24 +17,24 @@ body{
   text-align:center;
 }
 
-/* 🔥 großer, klickbarer Button */
+/* großer Button */
 button{
-  font-size:32px;
-  padding:25px 40px;
-  margin:20px;
+  font-size:34px;
+  padding:28px 45px;
+  margin:25px;
   border:none;
-  border-radius:15px;
+  border-radius:18px;
   background:#1e90ff;
   color:white;
   font-weight:bold;
-  width:80%;
-  max-width:400px;
+  width:85%;
+  max-width:420px;
 }
 
-/* Kamera Vollbild */
+/* Kamera */
 video{
   width:100vw;
-  height:80vh;
+  height:75vh;
   object-fit:cover;
   background:black;
 }
@@ -47,6 +47,11 @@ h2{
   margin:10px 0;
 }
 
+#result{
+  font-size:40px;
+  margin-top:20px;
+}
+
 </style>
 
 </head>
@@ -56,14 +61,18 @@ h2{
 <h2>🎫 QR Scanner aktiv</h2>
 
 <video id="video" playsinline></video>
-
 <canvas id="canvas"></canvas>
 
 <button onclick="startCamera()">
   📷 Kamera starten
 </button>
 
+<div id="result"></div>
+
 <script>
+
+const SUPABASE_URL = "https://mvapgwlaqzjaxhrroopf.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12YXBnd2xhcXpqYXhocnJvb3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4OTE4NTUsImV4cCI6MjA5NTQ2Nzg1NX0.9o5sUkIwYpxx0kvyzUI60oa-vUGtf0KYtoYHXAbGbYo";
 
 let video = document.getElementById("video");
 let canvas = document.getElementById("canvas");
@@ -72,14 +81,11 @@ let ctx = canvas.getContext("2d");
 let stream = null;
 let scanLock = false;
 
-/* ---------------------------
-   CAMERA START
-----------------------------*/
+/* ---------------- CAMERA ---------------- */
 async function startCamera(){
 
   try {
 
-    // falls alte Kamera läuft → stoppen
     if(stream){
       stream.getTracks().forEach(t => t.stop());
       stream = null;
@@ -90,21 +96,16 @@ async function startCamera(){
     });
 
     video.srcObject = stream;
-
     await video.play();
 
     requestAnimationFrame(scan);
 
-  } catch(err) {
-
+  } catch(err){
     alert("Kamera Fehler: " + err);
-
   }
 }
 
-/* ---------------------------
-   QR SCAN LOOP
-----------------------------*/
+/* ---------------- SCAN LOOP ---------------- */
 function scan(){
 
   if(video.readyState === video.HAVE_ENOUGH_DATA){
@@ -128,14 +129,13 @@ function scan(){
 
       scanLock = true;
 
-      // 🔥 Kamera sofort stoppen
+      // Kamera stoppen
       if(stream){
         stream.getTracks().forEach(t => t.stop());
         stream = null;
       }
 
-      // Redirect zu Google Script
-      window.location.href = code.data;
+      checkTicket(code.data);
 
       return;
     }
@@ -144,16 +144,82 @@ function scan(){
   requestAnimationFrame(scan);
 }
 
-/* ---------------------------
-   RESET AFTER RETURN
-----------------------------*/
-window.addEventListener("pageshow", function () {
+/* ---------------- SUPABASE CHECK ---------------- */
+async function checkTicket(token){
 
+  try {
+
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/tickets?token=eq.${token}`,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: "Bearer " + SUPABASE_KEY
+        }
+      }
+    );
+
+    const data = await res.json();
+
+    if(!data || data.length === 0){
+      showResult("❌ UNGÜLTIG", "red");
+      return;
+    }
+
+    const ticket = data[0];
+
+    if(ticket.used){
+      showResult("✖ BEREITS EINGELÖST", "red");
+      return;
+    }
+
+    // Ticket markieren
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/tickets?token=eq.${token}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY,
+          Authorization: "Bearer " + SUPABASE_KEY,
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({
+          used: true,
+          used_at: new Date().toISOString()
+        })
+      }
+    );
+
+    showResult("✔ GÜLTIG", "green");
+
+  } catch(err){
+    showResult("FEHLER", "red");
+    alert(err);
+  }
+}
+
+/* ---------------- UI ---------------- */
+function showResult(text, color){
+
+  document.body.style.background = color;
+  document.getElementById("result").innerText = text;
+
+  // Reset nach 2 Sekunden
+  setTimeout(() => {
+
+    document.body.style.background = "#111";
+    document.getElementById("result").innerText = "";
+    scanLock = false;
+
+    startCamera();
+
+  }, 2000);
+}
+
+/* ---------------- BACK BUTTON FIX ---------------- */
+window.addEventListener("pageshow", () => {
   scanLock = false;
-
-  // Kamera bewusst NICHT automatisch starten
-  // (iOS blockiert sonst NotAllowedError)
-
 });
 
 </script>
