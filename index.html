@@ -66,16 +66,15 @@ let scanLock = false;
 
 async function startCamera(){
 
-  try{
+  if (stream) {
+    return; // verhindert doppeltes Starten
+  }
 
-    const stream =
-      await navigator.mediaDevices.getUserMedia({
+  try {
 
-        video:{
-          facingMode:"environment"
-        }
-
-      });
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
 
     video.srcObject = stream;
 
@@ -83,10 +82,8 @@ async function startCamera(){
 
     requestAnimationFrame(scan);
 
-  }catch(err){
-
+  } catch(err) {
     alert("Kamera Fehler: " + err);
-
   }
 }
 
@@ -128,6 +125,7 @@ if (code && !scanLock) {
   return;
 }
     window.addEventListener("pageshow", function () {
+  scanLock = false;
   startCamera();
 });
     }
