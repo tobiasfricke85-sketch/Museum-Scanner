@@ -119,14 +119,14 @@ function scan(){
       canvas.height
     );
 
-    if(code && !scanLock){
+if (code && !scanLock) {
 
-      scanLock = true;
+  scanLock = true;
 
-      // DIREKT ZUM GOOGLE SCRIPT
-      window.location.href = code.data;
+  window.location.href = code.data;
 
-      return;
+  return;
+}
     }
   }
 
