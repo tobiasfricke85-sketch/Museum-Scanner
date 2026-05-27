@@ -17,10 +17,6 @@ body{
   text-align:center;
 }
 
-h2{
-  margin:10px 0;
-}
-
 video{
   width:100vw;
   height:80vh;
@@ -49,12 +45,9 @@ button{
 <h2>🎫 QR Scanner aktiv</h2>
 
 <video id="video" playsinline></video>
-
 <canvas id="canvas"></canvas>
 
-<button onclick="startCamera()">
-  Kamera starten
-</button>
+<button onclick="startCamera()">Kamera starten</button>
 
 <script>
 
@@ -62,13 +55,12 @@ let video = document.getElementById("video");
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 
+let stream = null;
 let scanLock = false;
 
 async function startCamera(){
 
-  if (stream) {
-    return; // verhindert doppeltes Starten
-  }
+  if(stream) return;
 
   try {
 
@@ -94,21 +86,14 @@ function scan(){
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    ctx.drawImage(
-      video,
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(
       0,
       0,
       canvas.width,
       canvas.height
     );
-
-    const imageData =
-      ctx.getImageData(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
 
     const code = jsQR(
       imageData.data,
@@ -116,23 +101,22 @@ function scan(){
       canvas.height
     );
 
-if (code && !scanLock) {
+    if(code && !scanLock){
 
-  scanLock = true;
+      scanLock = true;
 
-  window.location.href = code.data;
-
-  return;
-}
-    window.addEventListener("pageshow", function () {
-  scanLock = false;
-  startCamera();
-});
+      window.location.href = code.data;
+      return;
     }
   }
 
   requestAnimationFrame(scan);
 }
+
+window.addEventListener("pageshow", function () {
+  scanLock = false;
+  stream = null;
+});
 
 </script>
 
