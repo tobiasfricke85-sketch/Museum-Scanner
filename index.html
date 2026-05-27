@@ -127,6 +127,9 @@ if (code && !scanLock) {
 
   return;
 }
+    window.addEventListener("pageshow", function () {
+  startCamera();
+});
     }
   }
 
