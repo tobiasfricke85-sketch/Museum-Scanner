@@ -13,6 +13,7 @@
       color: white;
       font-family: Arial;
       text-align: center;
+      overflow: hidden;
     }
 
     h2 {
@@ -31,9 +32,19 @@
     }
 
     button {
-      font-size: 18px;
-      padding: 12px 16px;
+      font-size: 20px;
+      padding: 12px 20px;
       margin: 10px;
+      border-radius: 10px;
+      border: none;
+    }
+
+    .result {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
     }
   </style>
 </head>
@@ -45,7 +56,7 @@
 <video id="video" playsinline></video>
 <canvas id="canvas"></canvas>
 
-<button onclick="startCamera()">Start</button>
+<button onclick="startCamera()">Kamera starten</button>
 
 <script>
 
@@ -64,22 +75,21 @@ async function startCamera() {
   try {
 
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
+      video: {
+        facingMode: "environment"
+      }
     });
 
     video.srcObject = stream;
+
     await video.play();
 
     requestAnimationFrame(scan);
 
   } catch (err) {
-    alert("Kamera Fehler: " + err);
-  }
-}
 
-function stopCamera() {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
+    alert("Kamera Fehler: " + err);
+
   }
 }
 
@@ -92,57 +102,88 @@ function scan() {
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    let img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let code = jsQR(img.data, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    const code = jsQR(
+      imageData.data,
+      canvas.width,
+      canvas.height
+    );
 
     if (code && !scanLock) {
 
       scanLock = true;
-const callbackName = "scannerCallback";
 
-window[callbackName] = function(result) {
+      const callbackName = "scannerCallback";
 
-  const status = result.status;
-  const name = result.name || "";
+      window[callbackName] = function(result) {
 
-  if (status === "OK") {
+        const status = result.status;
+        const name = result.name || "";
 
-    soundGood.play();
+        if (status === "OK") {
 
-    document.body.style.background = "green";
-    document.body.innerHTML = `
-      <h1 style="font-size:50px;">✔ GÜLTIG</h1>
-      <p style="font-size:30px;">${name}</p>
-    `;
+          soundGood.play();
 
-  } else {
+          document.body.style.background = "green";
 
-    soundBad.play();
+          document.body.innerHTML = `
+            <div class="result">
+              <h1 style="font-size:60px;">✔ GÜLTIG</h1>
+              <p style="font-size:35px;">${name}</p>
+            </div>
+          `;
 
-    document.body.style.background = "red";
-    document.body.innerHTML = `
-      <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
-      <p style="font-size:20px;">Bereits eingelöst</p>
-    `;
-  }
+        } else if (status === "USED") {
 
-  setTimeout(() => {
-    location.reload();
-  }, 2000);
-};
+          soundBad.play();
 
-const script = document.createElement("script");
+          document.body.style.background = "red";
 
-script.src = code.data + "&callback=" + callbackName;
+          document.body.innerHTML = `
+            <div class="result">
+              <h1 style="font-size:60px;">✖ BEREITS EINGELÖST</h1>
+              <p style="font-size:30px;">${name}</p>
+            </div>
+          `;
 
-document.body.appendChild(script);
-    
-        .catch(err => {
+        } else {
 
-          alert("FEHLER: " + err);
+          soundBad.play();
 
-          scanLock = false;
-        });
+          document.body.style.background = "darkred";
+
+          document.body.innerHTML = `
+            <div class="result">
+              <h1 style="font-size:60px;">✖ UNGÜLTIG</h1>
+            </div>
+          `;
+        }
+
+        setTimeout(() => {
+
+          location.reload();
+
+        }, 2000);
+      };
+
+      const script = document.createElement("script");
+
+      script.src = code.data + "&callback=" + callbackName;
+
+      script.onerror = function() {
+
+        alert("Script konnte nicht geladen werden");
+
+        scanLock = false;
+      };
+
+      document.body.appendChild(script);
 
       return;
     }
