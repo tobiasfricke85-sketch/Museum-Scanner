@@ -98,56 +98,45 @@ function scan() {
     if (code && !scanLock) {
 
       scanLock = true;
+const callbackName = "scannerCallback";
 
-      fetch(code.data)
-        .then(res => res.text())
-        .then(result => {
+window[callbackName] = function(result) {
 
-          const parts = result.split("|");
-          const status = parts[0];
-          const name = parts[1] || "";
+  const status = result.status;
+  const name = result.name || "";
 
-          if (status === "OK") {
+  if (status === "OK") {
 
-            soundGood.play();
+    soundGood.play();
 
-            document.body.style.background = "green";
-            document.body.innerHTML = `
-              <h1 style="font-size:50px;">✔ GÜLTIG</h1>
-              <p style="font-size:30px;">${name}</p>
-            `;
+    document.body.style.background = "green";
+    document.body.innerHTML = `
+      <h1 style="font-size:50px;">✔ GÜLTIG</h1>
+      <p style="font-size:30px;">${name}</p>
+    `;
 
-          } else {
+  } else {
 
-            soundBad.play();
+    soundBad.play();
 
-            document.body.style.background = "red";
-            document.body.innerHTML = `
-              <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
-              <p style="font-size:20px;">Bereits eingelöst</p>
-            `;
-          }
+    document.body.style.background = "red";
+    document.body.innerHTML = `
+      <h1 style="font-size:50px;">✖ UNGÜLTIG</h1>
+      <p style="font-size:20px;">Bereits eingelöst</p>
+    `;
+  }
 
-          setTimeout(() => {
+  setTimeout(() => {
+    location.reload();
+  }, 2000);
+};
 
-            document.body.innerHTML = `
-              <h2>🎫 QR Scanner aktiv</h2>
-              <video id="video" playsinline></video>
-              <canvas id="canvas" style="display:none"></canvas>
-              <button onclick="startCamera()">Start</button>
-            `;
+const script = document.createElement("script");
 
-            video = document.getElementById("video");
-            canvas = document.getElementById("canvas");
-            ctx = canvas.getContext("2d");
+script.src = code.data + "&callback=" + callbackName;
 
-            scanLock = false;
-
-            startCamera();
-
-          }, 2000);
-
-        })
+document.body.appendChild(script);
+    
         .catch(err => {
 
           alert("FEHLER: " + err);
