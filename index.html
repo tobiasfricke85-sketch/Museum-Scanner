@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
 <title>QR Scanner</title>
 
@@ -14,6 +15,10 @@ body{
   color:white;
   font-family:Arial;
   text-align:center;
+}
+
+h2{
+  margin:10px 0;
 }
 
 video{
@@ -31,17 +36,12 @@ button{
   font-size:20px;
   padding:12px 20px;
   margin:10px;
-}
-
-.result{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  height:100vh;
+  border:none;
+  border-radius:10px;
 }
 
 </style>
+
 </head>
 
 <body>
@@ -49,9 +49,12 @@ button{
 <h2>🎫 QR Scanner aktiv</h2>
 
 <video id="video" playsinline></video>
+
 <canvas id="canvas"></canvas>
 
-<button onclick="startCamera()">Kamera starten</button>
+<button onclick="startCamera()">
+  Kamera starten
+</button>
 
 <script>
 
@@ -61,23 +64,18 @@ let ctx = canvas.getContext("2d");
 
 let scanLock = false;
 
-const soundGood = new Audio(
-  "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
-);
-
-const soundBad = new Audio(
-  "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
-);
-
 async function startCamera(){
 
   try{
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video:{
-        facingMode:"environment"
-      }
-    });
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video:{
+          facingMode:"environment"
+        }
+
+      });
 
     video.srcObject = stream;
 
@@ -92,52 +90,6 @@ async function startCamera(){
   }
 }
 
-function showResult(status,name){
-
-  if(status === "OK"){
-
-    soundGood.play();
-
-    document.body.style.background = "green";
-
-    document.body.innerHTML = `
-      <div class="result">
-        <h1 style="font-size:60px;">✔ GÜLTIG</h1>
-        <p style="font-size:35px;">${name}</p>
-      </div>
-    `;
-
-  }else if(status === "USED"){
-
-    soundBad.play();
-
-    document.body.style.background = "red";
-
-    document.body.innerHTML = `
-      <div class="result">
-        <h1 style="font-size:60px;">✖ BEREITS EINGELÖST</h1>
-        <p style="font-size:30px;">${name}</p>
-      </div>
-    `;
-
-  }else{
-
-    soundBad.play();
-
-    document.body.style.background = "darkred";
-
-    document.body.innerHTML = `
-      <div class="result">
-        <h1 style="font-size:60px;">✖ UNGÜLTIG</h1>
-      </div>
-    `;
-  }
-
-  setTimeout(() => {
-    location.reload();
-  },2000);
-}
-
 function scan(){
 
   if(video.readyState === video.HAVE_ENOUGH_DATA){
@@ -145,14 +97,21 @@ function scan(){
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    ctx.drawImage(video,0,0,canvas.width,canvas.height);
-
-    const imageData = ctx.getImageData(
+    ctx.drawImage(
+      video,
       0,
       0,
       canvas.width,
       canvas.height
     );
+
+    const imageData =
+      ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
 
     const code = jsQR(
       imageData.data,
@@ -164,23 +123,8 @@ function scan(){
 
       scanLock = true;
 
-      fetch(code.data)
-        .then(res => res.json())
-        .then(data => {
-
-          showResult(
-            data.status,
-            data.name || ""
-          );
-
-        })
-        .catch(err => {
-
-          alert("Fetch Fehler: " + err);
-
-          scanLock = false;
-
-        });
+      // DIREKT ZUM GOOGLE SCRIPT
+      window.location.href = code.data;
 
       return;
     }
