@@ -135,7 +135,10 @@ function scan(){
         stream = null;
       }
 
-      checkTicket(code.data);
+     const url = new URL(code.data);
+const token = url.searchParams.get("token");
+
+checkTicket(token);
 
       return;
     }
