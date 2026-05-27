@@ -1,52 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>QR Scanner</title>
+<meta charset="UTF-8">
+<title>QR Scanner</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: white;
-      font-family: Arial;
-      text-align: center;
-      overflow: hidden;
-    }
+<style>
 
-    h2 {
-      margin: 10px 0;
-    }
+body{
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
 
-    video {
-      width: 100vw;
-      height: 80vh;
-      object-fit: cover;
-      background: black;
-    }
+video{
+  width:100vw;
+  height:80vh;
+  object-fit:cover;
+  background:black;
+}
 
-    canvas {
-      display: none;
-    }
+canvas{
+  display:none;
+}
 
-    button {
-      font-size: 20px;
-      padding: 12px 20px;
-      margin: 10px;
-      border-radius: 10px;
-      border: none;
-    }
+button{
+  font-size:20px;
+  padding:12px 20px;
+  margin:10px;
+}
 
-    .result {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      height: 100vh;
-    }
-  </style>
+.result{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  height:100vh;
+}
+
+</style>
 </head>
 
 <body>
@@ -64,19 +59,23 @@ let video = document.getElementById("video");
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 
-let stream = null;
 let scanLock = false;
 
-const soundGood = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-const soundBad = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+const soundGood = new Audio(
+  "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+);
 
-async function startCamera() {
+const soundBad = new Audio(
+  "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
+);
 
-  try {
+async function startCamera(){
 
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment"
+  try{
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:"environment"
       }
     });
 
@@ -86,21 +85,67 @@ async function startCamera() {
 
     requestAnimationFrame(scan);
 
-  } catch (err) {
+  }catch(err){
 
     alert("Kamera Fehler: " + err);
 
   }
 }
 
-function scan() {
+function showResult(status,name){
 
-  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+  if(status === "OK"){
+
+    soundGood.play();
+
+    document.body.style.background = "green";
+
+    document.body.innerHTML = `
+      <div class="result">
+        <h1 style="font-size:60px;">✔ GÜLTIG</h1>
+        <p style="font-size:35px;">${name}</p>
+      </div>
+    `;
+
+  }else if(status === "USED"){
+
+    soundBad.play();
+
+    document.body.style.background = "red";
+
+    document.body.innerHTML = `
+      <div class="result">
+        <h1 style="font-size:60px;">✖ BEREITS EINGELÖST</h1>
+        <p style="font-size:30px;">${name}</p>
+      </div>
+    `;
+
+  }else{
+
+    soundBad.play();
+
+    document.body.style.background = "darkred";
+
+    document.body.innerHTML = `
+      <div class="result">
+        <h1 style="font-size:60px;">✖ UNGÜLTIG</h1>
+      </div>
+    `;
+  }
+
+  setTimeout(() => {
+    location.reload();
+  },2000);
+}
+
+function scan(){
+
+  if(video.readyState === video.HAVE_ENOUGH_DATA){
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
     const imageData = ctx.getImageData(
       0,
@@ -115,78 +160,27 @@ function scan() {
       canvas.height
     );
 
-    if (code && !scanLock) {
+    if(code && !scanLock){
 
       scanLock = true;
 
-      const callbackName = "scannerCallback";
+      fetch(code.data)
+        .then(res => res.json())
+        .then(data => {
 
-      window[callbackName] = function(result) {
+          showResult(
+            data.status,
+            data.name || ""
+          );
 
-        const status = result.status;
-        const name = result.name || "";
+        })
+        .catch(err => {
 
-        if (status === "OK") {
+          alert("Fetch Fehler: " + err);
 
-          soundGood.play();
+          scanLock = false;
 
-          document.body.style.background = "green";
-
-          document.body.innerHTML = `
-            <div class="result">
-              <h1 style="font-size:60px;">✔ GÜLTIG</h1>
-              <p style="font-size:35px;">${name}</p>
-            </div>
-          `;
-
-        } else if (status === "USED") {
-
-          soundBad.play();
-
-          document.body.style.background = "red";
-
-          document.body.innerHTML = `
-            <div class="result">
-              <h1 style="font-size:60px;">✖ BEREITS EINGELÖST</h1>
-              <p style="font-size:30px;">${name}</p>
-            </div>
-          `;
-
-        } else {
-
-          soundBad.play();
-
-          document.body.style.background = "darkred";
-
-          document.body.innerHTML = `
-            <div class="result">
-              <h1 style="font-size:60px;">✖ UNGÜLTIG</h1>
-            </div>
-          `;
-        }
-
-        setTimeout(() => {
-
-          location.reload();
-
-        }, 2000);
-      };
-
-      const script = document.createElement("script");
-const url = new URL(code.data);
-
-url.searchParams.set("callback", callbackName);
-
-script.src = url.toString();
-
-      script.onerror = function() {
-
-        alert("Script konnte nicht geladen werden");
-
-        scanLock = false;
-      };
-
-      document.body.appendChild(script);
+        });
 
       return;
     }
