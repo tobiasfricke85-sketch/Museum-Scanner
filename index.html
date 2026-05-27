@@ -17,6 +17,21 @@ body{
   text-align:center;
 }
 
+/* 🔥 großer, klickbarer Button */
+button{
+  font-size:32px;
+  padding:25px 40px;
+  margin:20px;
+  border:none;
+  border-radius:15px;
+  background:#1e90ff;
+  color:white;
+  font-weight:bold;
+  width:80%;
+  max-width:400px;
+}
+
+/* Kamera Vollbild */
 video{
   width:100vw;
   height:80vh;
@@ -28,12 +43,8 @@ canvas{
   display:none;
 }
 
-button{
-  font-size:20px;
-  padding:12px 20px;
-  margin:10px;
-  border:none;
-  border-radius:10px;
+h2{
+  margin:10px 0;
 }
 
 </style>
@@ -45,9 +56,12 @@ button{
 <h2>🎫 QR Scanner aktiv</h2>
 
 <video id="video" playsinline></video>
+
 <canvas id="canvas"></canvas>
 
-<button onclick="startCamera()">Kamera starten</button>
+<button onclick="startCamera()">
+  📷 Kamera starten
+</button>
 
 <script>
 
@@ -58,11 +72,18 @@ let ctx = canvas.getContext("2d");
 let stream = null;
 let scanLock = false;
 
+/* ---------------------------
+   CAMERA START
+----------------------------*/
 async function startCamera(){
 
-  if(stream) return;
-
   try {
+
+    // falls alte Kamera läuft → stoppen
+    if(stream){
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
 
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "environment" }
@@ -75,10 +96,15 @@ async function startCamera(){
     requestAnimationFrame(scan);
 
   } catch(err) {
+
     alert("Kamera Fehler: " + err);
+
   }
 }
 
+/* ---------------------------
+   QR SCAN LOOP
+----------------------------*/
 function scan(){
 
   if(video.readyState === video.HAVE_ENOUGH_DATA){
@@ -86,13 +112,10 @@ function scan(){
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
     const imageData = ctx.getImageData(
-      0,
-      0,
-      canvas.width,
-      canvas.height
+      0,0,canvas.width,canvas.height
     );
 
     const code = jsQR(
@@ -105,7 +128,15 @@ function scan(){
 
       scanLock = true;
 
+      // 🔥 Kamera sofort stoppen
+      if(stream){
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+
+      // Redirect zu Google Script
       window.location.href = code.data;
+
       return;
     }
   }
@@ -113,9 +144,16 @@ function scan(){
   requestAnimationFrame(scan);
 }
 
+/* ---------------------------
+   RESET AFTER RETURN
+----------------------------*/
 window.addEventListener("pageshow", function () {
+
   scanLock = false;
-  stream = null;
+
+  // Kamera bewusst NICHT automatisch starten
+  // (iOS blockiert sonst NotAllowedError)
+
 });
 
 </script>
