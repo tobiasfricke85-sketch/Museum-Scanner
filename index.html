@@ -142,8 +142,7 @@ function scan(){
         stream = null;
       }
 
-     const url = new URL(code.data);
-const token = url.searchParams.get("token");
+     const token = code.data.trim();
 
 checkTicket(token);
 
