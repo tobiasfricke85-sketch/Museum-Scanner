@@ -167,6 +167,7 @@ async function checkTicket(token){
 
     if(!data || data.length === 0){
       soundBad.play();
+      navigator.vibrate([100, 80, 100]);
       showResult("❌ UNGÜLTIG", "red");
       return;
     }
@@ -176,8 +177,12 @@ async function checkTicket(token){
     if(ticket.used){
       
       soundBad.play();
-      showResult("✖ BEREITS EINGELÖST", "red");
-      return;
+      navigator.vibrate([100, 80, 100]);
+      showResult(
+  "✖ BEREITS EINGELÖST",
+  "red",
+  ticket.first_name + " " + ticket.last_name
+);
     }
 
     // Ticket markieren
@@ -198,7 +203,11 @@ async function checkTicket(token){
       }
     );
 soundGood.play();
-    showResult("✔ GÜLTIG", "green");
+    navigator.vibrate(120);  showResult(
+  "✔ GÜLTIG",
+  "green",
+  ticket.first_name + " " + ticket.last_name
+);
 
   } catch(err){
     showResult("FEHLER", "red");
@@ -207,14 +216,15 @@ soundGood.play();
 }
 
 /* ---------------- UI ---------------- */
-function showResult(text, color){
+function showResult(text, color, name = ""){
 
   // Kamera ausblenden
   video.style.display = "none";
 
-  // Ergebnis anzeigen
+  // Hintergrundfarbe
   document.body.style.background = color;
 
+  // Ergebnis anzeigen
   document.getElementById("result").innerHTML = `
     <div style="
       margin-top:100px;
@@ -222,6 +232,13 @@ function showResult(text, color){
       font-weight:bold;
     ">
       ${text}
+    </div>
+
+    <div style="
+      margin-top:30px;
+      font-size:36px;
+    ">
+      ${name}
     </div>
   `;
 
