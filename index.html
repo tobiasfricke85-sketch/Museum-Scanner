@@ -210,10 +210,7 @@ soundGood.play();
 /* ---------------- UI ---------------- */
 function showResult(text, color){
 
-  // Kamera ausblenden
   video.style.display = "none";
-
-  // Ergebnis anzeigen
   document.body.style.background = color;
 
   document.getElementById("result").innerHTML = `
@@ -226,14 +223,10 @@ function showResult(text, color){
     </div>
   `;
 
-  // Reset nach 2 Sekunden
   setTimeout(() => {
 
     document.body.style.background = "#111";
-
     document.getElementById("result").innerHTML = "";
-
-    // Kamera wieder zeigen
     video.style.display = "block";
 
     scanLock = false;
