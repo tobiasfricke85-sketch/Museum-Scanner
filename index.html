@@ -62,12 +62,8 @@ h2{
 <button onclick="startCamera()">📷 Kamera starten</button>
 
 <div id="result"></div>
-<div id="debug" style="
-  margin-top:20px;
-  font-size:18px;
-  color:#aaa;
-  white-space:pre-wrap;
-"></div><script>
+
+<script>
 
 const SUPABASE_URL = "https://mvapgwlaqzjaxhrroopf.supabase.co";
 const SUPABASE_KEY = "DEIN_SUPABASE_KEY";
@@ -116,9 +112,15 @@ function scan(){
 
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
-    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const imageData = ctx.getImageData(
+      0,0,canvas.width,canvas.height
+    );
 
-    const code = jsQR(imageData.data, canvas.width, canvas.height);
+    const code = jsQR(
+      imageData.data,
+      canvas.width,
+      canvas.height
+    );
 
     if(code && !scanLock){
 
@@ -157,14 +159,6 @@ async function checkTicket(token){
 
     const data = await res.json();
 
-    debug(
-      "TOKEN:\n" + token +
-      "\n\nSUPABASE RESPONSE:\n" +
-      JSON.stringify(data, null, 2)
-    );
-
-    console.log("SUPABASE RESPONSE:", data);
-
     if(!data || data.length === 0){
       soundBad.play();
       showResult("❌ UNGÜLTIG", "red");
@@ -176,11 +170,7 @@ async function checkTicket(token){
 
     if(ticket.used){
       soundBad.play();
-      showResult(
-        "✖ BEREITS EINGELÖST",
-        "red",
-        ticket.first_name + " " + ticket.last_name
-      );
+      showResult("✖ BEREITS EINGELÖST", "red");
       scanLock = false;
       return;
     }
@@ -204,23 +194,19 @@ async function checkTicket(token){
 
     soundGood.play();
 
-    showResult(
-      "✔ GÜLTIG",
-      "green",
-      ticket.first_name + " " + ticket.last_name
-    );
+    showResult("✔ GÜLTIG", "green");
 
     scanLock = false;
 
   } catch(err){
-    console.log("ERROR:", err);
-    debug("ERROR:\n" + err.message);
+    console.log(err);
     showResult("FEHLER", "red");
     scanLock = false;
   }
 }
+
 /* ---------------- UI ---------------- */
-function showResult(text, color, name = ""){
+function showResult(text, color){
 
   video.style.display = "none";
   document.body.style.background = color;
@@ -228,9 +214,6 @@ function showResult(text, color, name = ""){
   document.getElementById("result").innerHTML = `
     <div style="margin-top:100px;font-size:60px;font-weight:bold;">
       ${text}
-    </div>
-    <div style="margin-top:30px;font-size:36px;">
-      ${name}
     </div>
   `;
 
@@ -244,10 +227,8 @@ function showResult(text, color, name = ""){
 
   }, 2000);
 }
-function debug(text){
-  document.getElementById("debug").innerText = text;
-}
-  /* ---------------- RESET ---------------- */
+
+/* ---------------- RESET ---------------- */
 window.addEventListener("pageshow", () => {
   scanLock = false;
 });
@@ -256,4 +237,5 @@ window.addEventListener("pageshow", () => {
 
 </body>
 </html>
+
 
