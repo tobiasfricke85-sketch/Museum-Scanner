@@ -52,7 +52,7 @@ canvas{ display:none; }
 
 <h2>🎫 QR Scanner aktiv</h2>
 
-<video id="video" playsinline autoplay muted></video>
+<video id="video" playsinline></video>
 <canvas id="canvas"></canvas>
 
 <button onclick="startCamera()">📷 Kamera starten</button>
@@ -62,7 +62,7 @@ canvas{ display:none; }
 <script>
 
 const SUPABASE_URL = "https://mvapgwlaqzjaxhrroopf.supabase.co";
-const SUPABASE_KEY = "DEIN_KEY_HIER";
+const SUPABASE_KEY = "DEIN_SUPABASE_KEY";
 
 let video = document.getElementById("video");
 let canvas = document.getElementById("canvas");
@@ -99,7 +99,7 @@ async function startCamera(){
   }
 }
 
-/* ---------------- SCAN ---------------- */
+/* ---------------- SCAN LOOP ---------------- */
 function scan(){
 
   if(video.readyState === video.HAVE_ENOUGH_DATA){
@@ -125,6 +125,7 @@ function scan(){
       const token = code.data.trim();
 
       checkTicket(token);
+
       return;
     }
   }
@@ -132,7 +133,7 @@ function scan(){
   requestAnimationFrame(scan);
 }
 
-/* ---------------- SUPABASE ---------------- */
+/* ---------------- SUPABASE CHECK ---------------- */
 async function checkTicket(token){
 
   try {
@@ -149,41 +150,26 @@ async function checkTicket(token){
 
     const data = await res.json();
 
-    if(!data || data.length === 0){
+    const ticket = data[0];
 
+    if(!ticket){
       soundBad.play();
-
-      if(navigator.vibrate){
-        navigator.vibrate([100,80,100]);
-      }
-
       showResult("❌ UNGÜLTIG", "red");
       scanLock = false;
       return;
     }
 
-    const ticket = data[0];
-
-    // USED
     if(ticket.used){
-
       soundBad.play();
-
-      if(navigator.vibrate){
-        navigator.vibrate([100,80,100]);
-      }
-
       showResult(
         "✖ BEREITS EINGELÖST",
         "red",
         ticket.first_name + " " + ticket.last_name
       );
-
       scanLock = false;
       return;
     }
 
-    // MARKIEREN
     await fetch(
       `${SUPABASE_URL}/rest/v1/tickets?token=eq.${token}`,
       {
@@ -203,18 +189,13 @@ async function checkTicket(token){
 
     soundGood.play();
 
-    if(navigator.vibrate){
-      navigator.vibrate(120);
-    }
-
     showResult(
       "✔ GÜLTIG",
       "green",
-      ticket.first_name + " " + ticket.last_name
+      ticket.first_name + " + " + ticket.last_name
     );
 
     scanLock = false;
-    return;
 
   } catch(err){
     alert(err);
