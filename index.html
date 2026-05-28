@@ -62,8 +62,12 @@ h2{
 <button onclick="startCamera()">📷 Kamera starten</button>
 
 <div id="result"></div>
-
-<script>
+<div id="debug" style="
+  margin-top:20px;
+  font-size:18px;
+  color:#aaa;
+  white-space:pre-wrap;
+"></div><script>
 
 const SUPABASE_URL = "https://mvapgwlaqzjaxhrroopf.supabase.co";
 const SUPABASE_KEY = "DEIN_SUPABASE_KEY";
@@ -152,7 +156,13 @@ async function checkTicket(token){
       }
     );
 
-  const data = await res.json();
+const data = await res.json();
+
+debug(
+  "TOKEN:\n" + token +
+  "\n\nSUPABASE RESPONSE:\n" +
+  JSON.stringify(data, null, 2)
+);
 
 console.log("SUPABASE RESPONSE:", data);
 console.log("TOKEN SENT:", token);
@@ -162,7 +172,17 @@ if (!ticket) {
   console.log("KEIN TICKET GEFUNDEN");
 }
     // ❌ NICHT GEFUNDEN
-  if (!data || data.length === 0) {
+ if(!data || data.length === 0){
+
+  debug(
+    "TOKEN:\n" + token +
+    "\n\nERGEBNIS: KEIN TREFFER"
+  );
+
+  soundBad.play();
+  showResult("❌ UNGÜLTIG", "red");
+  return;
+}
   soundBad.play();
   showResult("❌ UNGÜLTIG (kein Treffer)", "red");
   scanLock = false;
@@ -241,8 +261,10 @@ function showResult(text, color, name = ""){
 
   }, 2000);
 }
-
-/* ---------------- RESET ---------------- */
+function debug(text){
+  document.getElementById("debug").innerText = text;
+}
+  /* ---------------- RESET ---------------- */
 window.addEventListener("pageshow", () => {
   scanLock = false;
 });
