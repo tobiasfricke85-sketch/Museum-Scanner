@@ -145,7 +145,6 @@ async function checkTicket(token){
 
   try {
 
-    // ✅ FIX: BACKTICKS korrekt gesetzt
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/tickets?token=eq.${token}`,
       {
@@ -156,40 +155,25 @@ async function checkTicket(token){
       }
     );
 
-const data = await res.json();
+    const data = await res.json();
 
-debug(
-  "TOKEN:\n" + token +
-  "\n\nSUPABASE RESPONSE:\n" +
-  JSON.stringify(data, null, 2)
-);
+    debug(
+      "TOKEN:\n" + token +
+      "\n\nSUPABASE RESPONSE:\n" +
+      JSON.stringify(data, null, 2)
+    );
 
-console.log("SUPABASE RESPONSE:", data);
-console.log("TOKEN SENT:", token);
+    console.log("SUPABASE RESPONSE:", data);
+
+    if(!data || data.length === 0){
+      soundBad.play();
+      showResult("❌ UNGÜLTIG", "red");
+      scanLock = false;
+      return;
+    }
+
     const ticket = data[0];
 
-if (!ticket) {
-  console.log("KEIN TICKET GEFUNDEN");
-}
-    // ❌ NICHT GEFUNDEN
- if(!data || data.length === 0){
-
-  debug(
-    "TOKEN:\n" + token +
-    "\n\nERGEBNIS: KEIN TREFFER"
-  );
-
-  soundBad.play();
-  showResult("❌ UNGÜLTIG", "red");
-  return;
-}
-  soundBad.play();
-  showResult("❌ UNGÜLTIG (kein Treffer)", "red");
-  scanLock = false;
-  return;
-}
-
-    // ❌ BEREITS EINGELÖST
     if(ticket.used){
       soundBad.play();
       showResult(
@@ -201,7 +185,6 @@ if (!ticket) {
       return;
     }
 
-    // ✔ MARKIEREN
     await fetch(
       `${SUPABASE_URL}/rest/v1/tickets?token=eq.${token}`,
       {
@@ -230,12 +213,12 @@ if (!ticket) {
     scanLock = false;
 
   } catch(err){
-    console.log(err);
+    console.log("ERROR:", err);
+    debug("ERROR:\n" + err.message);
     showResult("FEHLER", "red");
     scanLock = false;
   }
 }
-
 /* ---------------- UI ---------------- */
 function showResult(text, color, name = ""){
 
