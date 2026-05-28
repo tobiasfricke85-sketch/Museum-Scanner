@@ -152,17 +152,22 @@ async function checkTicket(token){
       }
     );
 
-    const data = await res.json();
+  const data = await res.json();
 
+console.log("SUPABASE RESPONSE:", data);
+console.log("TOKEN SENT:", token);
     const ticket = data[0];
 
+if (!ticket) {
+  console.log("KEIN TICKET GEFUNDEN");
+}
     // ❌ NICHT GEFUNDEN
-    if(!ticket){
-      soundBad.play();
-      showResult("❌ UNGÜLTIG", "red");
-      scanLock = false;
-      return;
-    }
+  if (!data || data.length === 0) {
+  soundBad.play();
+  showResult("❌ UNGÜLTIG (kein Treffer)", "red");
+  scanLock = false;
+  return;
+}
 
     // ❌ BEREITS EINGELÖST
     if(ticket.used){
