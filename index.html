@@ -17,7 +17,6 @@ body{
   text-align:center;
 }
 
-/* großer Button */
 button{
   font-size:34px;
   padding:28px 45px;
@@ -31,7 +30,6 @@ button{
   max-width:420px;
 }
 
-/* Kamera */
 video{
   width:100vw;
   height:75vh;
@@ -39,9 +37,7 @@ video{
   background:black;
 }
 
-canvas{
-  display:none;
-}
+canvas{ display:none; }
 
 h2{
   margin:10px 0;
@@ -63,16 +59,14 @@ h2{
 <video id="video" playsinline></video>
 <canvas id="canvas"></canvas>
 
-<button onclick="startCamera()">
-  📷 Kamera starten
-</button>
+<button onclick="startCamera()">📷 Kamera starten</button>
 
 <div id="result"></div>
 
 <script>
 
 const SUPABASE_URL = "https://mvapgwlaqzjaxhrroopf.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12YXBnd2xhcXpqYXhocnJvb3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4OTE4NTUsImV4cCI6MjA5NTQ2Nzg1NX0.9o5sUkIwYpxx0kvyzUI60oa-vUGtf0KYtoYHXAbGbYo";
+const SUPABASE_KEY = "DEIN_SUPABASE_KEY";
 
 let video = document.getElementById("video");
 let canvas = document.getElementById("canvas");
@@ -80,7 +74,8 @@ let ctx = canvas.getContext("2d");
 
 let stream = null;
 let scanLock = false;
- const soundGood = new Audio("success.mp3");
+
+const soundGood = new Audio("success.mp3");
 const soundBad = new Audio("error.mp3");
 
 /* ---------------- CAMERA ---------------- */
@@ -107,7 +102,7 @@ async function startCamera(){
   }
 }
 
-/* ---------------- SCAN LOOP ---------------- */
+/* ---------------- SCAN ---------------- */
 function scan(){
 
   if(video.readyState === video.HAVE_ENOUGH_DATA){
@@ -117,29 +112,22 @@ function scan(){
 
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
-    const imageData = ctx.getImageData(
-      0,0,canvas.width,canvas.height
-    );
+    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
 
-    const code = jsQR(
-      imageData.data,
-      canvas.width,
-      canvas.height
-    );
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
 
     if(code && !scanLock){
 
       scanLock = true;
 
-      // Kamera stoppen
       if(stream){
         stream.getTracks().forEach(t => t.stop());
         stream = null;
       }
 
-     const token = code.data.trim();
+      const token = code.data.trim().replace(/\s/g, "");
 
-checkTicket(token);
+      checkTicket(token);
 
       return;
     }
@@ -148,13 +136,14 @@ checkTicket(token);
   requestAnimationFrame(scan);
 }
 
-/* ---------------- SUPABASE CHECK ---------------- */
+/* ---------------- SUPABASE ---------------- */
 async function checkTicket(token){
 
   try {
 
+    // ✅ FIX: BACKTICKS korrekt gesetzt
     const res = await fetch(
-      ${SUPABASE_URL}/rest/v1/tickets?token=eq.${token},
+      `${SUPABASE_URL}/rest/v1/tickets?token=eq.${token}`,
       {
         headers: {
           apikey: SUPABASE_KEY,
@@ -165,29 +154,31 @@ async function checkTicket(token){
 
     const data = await res.json();
 
-    if(!data || data.length === 0){
+    const ticket = data[0];
+
+    // ❌ NICHT GEFUNDEN
+    if(!ticket){
       soundBad.play();
-      navigator.vibrate([100, 80, 100]);
       showResult("❌ UNGÜLTIG", "red");
+      scanLock = false;
       return;
     }
 
-    const ticket = data[0];
-
+    // ❌ BEREITS EINGELÖST
     if(ticket.used){
-      
       soundBad.play();
-      navigator.vibrate([100, 80, 100]);
       showResult(
-  "✖ BEREITS EINGELÖST",
-  "red",
-  ticket.first_name + " " + ticket.last_name
-);
+        "✖ BEREITS EINGELÖST",
+        "red",
+        ticket.first_name + " " + ticket.last_name
+      );
+      scanLock = false;
+      return;
     }
 
-    // Ticket markieren
+    // ✔ MARKIEREN
     await fetch(
-      ${SUPABASE_URL}/rest/v1/tickets?token=eq.${token},
+      `${SUPABASE_URL}/rest/v1/tickets?token=eq.${token}`,
       {
         method: "PATCH",
         headers: {
@@ -202,64 +193,51 @@ async function checkTicket(token){
         })
       }
     );
-soundGood.play();
-    navigator.vibrate(120);  showResult(
-  "✔ GÜLTIG",
-  "green",
-  ticket.first_name + " " + ticket.last_name
-);
+
+    soundGood.play();
+
+    showResult(
+      "✔ GÜLTIG",
+      "green",
+      ticket.first_name + " " + ticket.last_name
+    );
+
+    scanLock = false;
 
   } catch(err){
+    console.log(err);
     showResult("FEHLER", "red");
-    alert(err);
+    scanLock = false;
   }
 }
 
 /* ---------------- UI ---------------- */
 function showResult(text, color, name = ""){
 
-  // Kamera ausblenden
   video.style.display = "none";
-
-  // Hintergrundfarbe
   document.body.style.background = color;
 
-  // Ergebnis anzeigen
   document.getElementById("result").innerHTML = `
-    <div style="
-      margin-top:100px;
-      font-size:60px;
-      font-weight:bold;
-    ">
+    <div style="margin-top:100px;font-size:60px;font-weight:bold;">
       ${text}
     </div>
-
-    <div style="
-      margin-top:30px;
-      font-size:36px;
-    ">
+    <div style="margin-top:30px;font-size:36px;">
       ${name}
     </div>
   `;
 
-  // Reset nach 2 Sekunden
   setTimeout(() => {
 
     document.body.style.background = "#111";
-
     document.getElementById("result").innerHTML = "";
-
-    // Kamera wieder zeigen
     video.style.display = "block";
-
-    scanLock = false;
 
     startCamera();
 
   }, 2000);
 }
 
-/* ---------------- BACK BUTTON FIX ---------------- */
+/* ---------------- RESET ---------------- */
 window.addEventListener("pageshow", () => {
   scanLock = false;
 });
